@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anatomický Kvíz - Hard Mode</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #c0392b;
+            --bg-color: #ecf0f1;
+            --card-bg: #ffffff;
+            --hint-bg: #fff3cd;
+            --hint-text: #856404;
+            --info-bg: #d4edda;
+            --info-text: #155724;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            color: #7f8c8d;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #dfe6e9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #question-area {
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #question-text {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        /* Tlačítko Nápověda */
+        .hint-btn {
+            background: none;
+            border: 1px dashed var(--accent-color);
+            color: var(--accent-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+        
+        .hint-btn:hover {
+            background-color: #f0f8ff;
+        }
+
+        .hint-box {
+            background-color: var(--hint-bg);
+            color: var(--hint-text);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+            border-left: 4px solid #ffc107;
+            display: none;
+        }
+
+        /* Box s vysvětlením */
+        .explanation-box {
+            background-color: var(--info-bg);
+            color: var(--info-text);
+            border-left: 5px solid var(--success-color);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 1em;
+            line-height: 1.5;
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+            display: none;
+        }
+
+        .explanation-box strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .options-grid { grid-template-columns: 1fr; }
+            .container { padding: 15px; }
+            #question-text { font-size: 1.2em; }
+        }
+
+        .option-card {
+            background-color: white;
+            border: 2px solid #bdc3c7;
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 70px;
+            user-select: none;
+            font-weight: 500;
+        }
+
+        .option-card:hover:not(.disabled) {
+            border-color: var(--accent-color);
+            background-color: #f4faff;
+            transform: translateY(-2px);
+        }
+
+        .option-card.correct {
+            background-color: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
+        }
+
+        .option-card.wrong {
+            background-color: var(--danger-color);
+            color: white;
+            border-color: var(--danger-color);
+            opacity: 0.6;
+        }
+        
+        .option-card.disabled {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .next-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .next-btn:hover { background-color: #2980b9; }
+        .hidden { display: none !important; }
+
+        #end-screen { text-align: center; padding: 20px; }
+        #final-score { font-size: 3em; color: var(--accent-color); margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="stats">
+            <span id="question-counter">Otázka 1</span>
+            <span id="score-counter">Skóre: 0</span>
+        </div>
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+    </header>
+
+    <div id="quiz-screen">
+        <div id="question-area">
+            <div id="question-text">Načítání...</div>
+            
+            <button class="hint-btn" onclick="showHint()" id="hint-btn">
+                💡 Kde to leží? (Nápověda)
+            </button>
+            <div id="hint-box" class="hint-box"></div>
+        </div>
+
+        <div class="options-grid">
+            <div class="option-card" onclick="selectOption(0)" id="opt-0">A</div>
+            <div class="option-card" onclick="selectOption(1)" id="opt-1">B</div>
+        </div>
+
+        <div id="explanation-box" class="explanation-box"></div>
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">Další otázka ➡</button>
+    </div>
+
+    <div id="end-screen" class="hidden">
+        <h2>Kvíz dokončen!</h2>
+        <p>Tvé výsledné skóre:</p>
+        <div id="final-score">0 / 0</div>
+        <button class="next-btn" style="display:block" onclick="restartQuiz()">Spustit znovu</button>
+    </div>
+</div>
+
+<script>
+    /*
+       TYPY (t):
+       1 = Roviny a směry
+       2 = Kosti a části kostí
+       3 = Klouby a vazy
+       4 = Svaly
+       5 = Nervy a cévy
+       6 = Ostatní (buňky, tkáně)
+    */
+    const database = [
+        // ROVINY A SMĚRY (Typ 1)
+        { t: 1, q: "Jak se nazývá rovina, která dělí tělo na pravou a levou polovinu (zrcadlově)?", a: "Rovina mediánní", h: "Střed těla.", e: "Jediná rovina dělící tělo na symetrické poloviny." },
+        { t: 1, q: "Jak se nazývají roviny rovnoběžné s rovinou mediánní?", a: "Roviny sagitální", h: "Mimo střed, zepředu dozadu.", e: "Sagitta = šíp." },
+        { t: 1, q: "Jaká rovina dělí tělo na přední a zadní část?", a: "Rovina frontální", h: "Rovnoběžná s čelem.", e: "Frons = čelo. Někdy zvaná koronární." },
+        { t: 1, q: "Jaká rovina dělí tělo na horní a dolní část?", a: "Rovina transverzální", h: "Napříč tělem.", e: "Vodorovná rovina." },
+        { t: 1, q: "Co znamená směr „kraniální“?", a: "Směrem k hlavě (nahoru)", h: "Nahoru.", e: "Cranium = lebka." },
+        { t: 1, q: "Co znamená směr „kaudální“?", a: "Směrem k dolnímu konci (dolů)", h: "Dolů.", e: "Cauda = ocas." },
+        { t: 1, q: "Co znamená směr „distální“ na končetině?", a: "Dále od trupu", h: "K prstům.", e: "Distantia = vzdálenost." },
+        { t: 1, q: "Co znamená směr „proximální“ na končetině?", a: "Blíže k trupu", h: "K rameni/kyčli.", e: "Proximus = nejbližší." },
+        { t: 1, q: "Jak se latinsky řekne „vnitřní“ (směrem ke střední rovině)?", a: "Medialis", h: "Ke středu.", e: "Medium = střed." },
+        { t: 1, q: "Jak se latinsky řekne „zevní“ (směrem od střední roviny)?", a: "Lateralis", h: "Do boku.", e: "Latus = bok." },
+        { t: 1, q: "Jaký pohyb znamená „flexe“?", a: "Ohyb", h: "Zmenšení úhlu.", e: "Např. pokrčení lokte." },
+        { t: 1, q: "Jaký pohyb znamená „extenze“?", a: "Natažení", h: "Zvětšení úhlu.", e: "Např. narovnání lokte." },
+        { t: 1, q: "Jaký pohyb znamená „abdukce“?", a: "Upažení (od těla)", h: "Pohyb pryč.", e: "Ab = pryč." },
+        { t: 1, q: "Jaký pohyb znamená „addukce“?", a: "Připažení (k tělu)", h: "Pohyb k sobě.", e: "Ad = k něčemu." },
+        { t: 1, q: "Co znamená poloha „supinace“ předloktí?", a: "Dlaně směřují dopředu/nahoru", h: "Jako když prosíš.", e: "Malíková hrana u těla." },
+        { t: 1, q: "Co znamená poloha „pronace“ předloktí?", a: "Dlaně směřují dozadu/dolů", h: "Jako když hraješ na klavír.", e: "Palcová hrana u těla." },
+
+        // KOSTI (Typ 2)
+        { t: 2, q: "Jak se nazývá vazivový obal kosti na povrchu?", a: "Okostice (periost)", h: "Povrch kosti.", e: "Bohatě inervovaná blána." },
+        { t: 2, q: "Co je to diafýza?", a: "Tělo dlouhé kosti (střed)", h: "Dlouhá část.", e: "Trubkovitá střední část." },
+        { t: 2, q: "Co je to epifýza?", a: "Konec dlouhé kosti", h: "Kloubní konec.", e: "Rozšířený konec kosti." },
+        { t: 2, q: "Kolik krčních obratlů má člověk?", a: "7", h: "Krk.", e: "C1-C7." },
+        { t: 2, q: "Jak se latinsky nazývá první krční obratel?", a: "Atlas", h: "Pod lebkou.", e: "Nosič." },
+        { t: 2, q: "Jak se latinsky nazývá druhý krční obratel?", a: "Axis", h: "Pod Atlasem.", e: "Čepovec." },
+        { t: 2, q: "Kolik je hrudních obratlů?", a: "12", h: "Hrudník.", e: "Th1-Th12." },
+        { t: 2, q: "Kolik je bederních obratlů?", a: "5", h: "Bedra.", e: "L1-L5." },
+        { t: 2, q: "Jak se nazývá kost křížová?", a: "Os sacrum", h: "V pánvi vzadu.", e: "Srostla z 5 obratlů." },
+        { t: 2, q: "Kolik párů žeber má člověk?", a: "12 párů", h: "Hrudní koš.", e: "Celkem 24 žeber." },
+        { t: 2, q: "Která žebra jsou „pravá“?", a: "1.–7. pár", h: "Přímo na sternum.", e: "Mají vlastní chrupavku na sternum." },
+        { t: 2, q: "Která žebra jsou „volná“?", a: "11. a 12. pár", h: "Konec ve svalech.", e: "Nedosahují ke kosti hrudní." },
+        { t: 2, q: "Co je to Manubrium?", a: "Rukojeť kosti hrudní", h: "Horní část sterna.", e: "Část sterna." },
+        { t: 2, q: "Co je to Processus xiphoideus?", a: "Mečovitý výběžek", h: "Dolní konec sterna.", e: "Nejnižší část hrudní kosti." },
+        { t: 2, q: "Jak se nazývá lícní kost?", a: "Os zygomaticum", h: "Tvář.", e: "Tvoří lícní oblouk." },
+        { t: 2, q: "Jak se nazývá kost čelní?", a: "Os frontale", h: "Čelo.", e: "Tvoří čelo a strop očnice." },
+        { t: 2, q: "Jak se nazývá kost týlní?", a: "Os occipitale", h: "Zadní část hlavy.", e: "Je v ní velký týlní otvor." },
+        { t: 2, q: "Co je to Clavicula?", a: "Kost klíční", h: "Pletenec HK.", e: "Esovovitě prohnutá kost." },
+        { t: 2, q: "Co je to Scapula?", a: "Lopatka", h: "Záda nahoře.", e: "Plochá trojúhelníková kost." },
+        { t: 2, q: "Co je to Humerus?", a: "Kost pažní", h: "Paže.", e: "Kloubí se v rameni a lokti." },
+        { t: 2, q: "Co je to Radius?", a: "Kost vřetenní", h: "Předloktí (palec).", e: "Na palcové straně." },
+        { t: 2, q: "Co je to Ulna?", a: "Kost loketní", h: "Předloktí (malík).", e: "Na malíkové straně." },
+        { t: 2, q: "Co je to Olecranon?", a: "Loketní výběžek", h: "Špička lokte.", e: "Součást ulny." },
+        { t: 2, q: "Která kost zápěstí je nejčastěji zlomená?", a: "Os scaphoideum", h: "Zápěstí.", e: "Loďkovitá kost." },
+        { t: 2, q: "Co je to Femur?", a: "Kost stehenní", h: "Stehno.", e: "Nejdelší kost v těle." },
+        { t: 2, q: "Co je to Tibia?", a: "Kost holenní", h: "Bérec (silná).", e: "Nosná kost bérce." },
+        { t: 2, q: "Co je to Fibula?", a: "Kost lýtková", h: "Bérec (tenká).", e: "Vnější kotník." },
+        { t: 2, q: "Co je to Patella?", a: "Čéška", h: "Koleno.", e: "Sezamská kost v šlaše." },
+        { t: 2, q: "Co je to Calcaneus?", a: "Kost patní", h: "Pata.", e: "Největší kost nohy." },
+        { t: 2, q: "Co je to Talus?", a: "Kost hlezenní", h: "Kotník.", e: "Přenáší váhu na nohu." },
+        { t: 2, q: "Co je to Acetabulum?", a: "Jamka kyčelního kloubu", h: "Pánev.", e: "Miska na ocet." },
+        { t: 2, q: "Co je to Crista iliaca?", a: "Hřeben kosti kyčelní", h: "Bok pánve.", e: "Horní okraj lopaty." },
+        
+        // KLOUBY A VAZY (Typ 3)
+        { t: 3, q: "Jaký typ kloubu je ramenní kloub?", a: "Kulovitý volný", h: "Rameno.", e: "Nejpohyblivější kloub." },
+        { t: 3, q: "Jaký typ kloubu je kyčelní kloub?", a: "Kulovitý omezený", h: "Kyčel.", e: "Hluboká jamka omezuje rozsah." },
+        { t: 3, q: "Co je to symfýza?", a: "Spona stydká", h: "Spojení pánve vpředu.", e: "Chrupavčité spojení." },
+        { t: 3, q: "Co jsou menisky?", a: "Chrupavčité destičky v koleni", h: "Koleno.", e: "Vyrovnávají zakřivení ploch." },
+        { t: 3, q: "Který vaz je v koleni nejčastěji přetržený?", a: "Přední zkřížený vaz (LCA)", h: "Koleno uvnitř.", e: "Zajišťuje přední stabilitu." },
+        { t: 3, q: "Co je to sutura?", a: "Lebeční šev", h: "Lebka.", e: "Pevné vazivové spojení kostí lebky." },
+        { t: 3, q: "Co je to fontanela?", a: "Vazivový lupínek u novorozenců", h: "Lebka dítěte.", e: "Místo kde se kosti ještě nespojily." },
+        
+        // SVALY (Typ 4)
+        { t: 4, q: "Jak se jmenuje nejširší sval zad?", a: "M. latissimus dorsi", h: "Záda.", e: "Plavecký sval." },
+        { t: 4, q: "Jak se jmenuje kápový sval?", a: "M. trapezius", h: "Šíje a horní záda.", e: "Zdvihá ramena." },
+        { t: 4, q: "Jak se jmenuje velký prsní sval?", a: "M. pectoralis major", h: "Hrudník.", e: "Dělá kliky." },
+        { t: 4, q: "Který sval tvoří „pekáč buchet“?", a: "M. rectus abdominis", h: "Břicho.", e: "Přímý sval břišní." },
+        { t: 4, q: "Co je to bránice (diaphragma)?", a: "Hlavní nádechový sval", h: "Mezi hrudníkem a břichem.", e: "Odděluje dutiny." },
+        { t: 4, q: "Jak se jmenuje sval na rameni (injekce)?", a: "M. deltoideus", h: "Rameno.", e: "Sval deltový." },
+        { t: 4, q: "Co je to Biceps brachii?", a: "Dvojhlavý sval pažní", h: "Paže vpředu.", e: "Ohýbá loket a supinuje." },
+        { t: 4, q: "Co je to Triceps brachii?", a: "Trojhlavý sval pažní", h: "Paže vzadu.", e: "Natahuje loket." },
+        { t: 4, q: "Jak se jmenuje čtyřhlavý sval stehenní?", a: "M. quadriceps femoris", h: "Stehno vpředu.", e: "Natahuje koleno." },
+        { t: 4, q: "Kde je Achillova šlacha?", a: "Na patě", h: "Dolní část lýtka.", e: "Úpon tricepsu surae." },
+        { t: 4, q: "Jaký sval dělá „boxerský úder“?", a: "M. serratus anterior", h: "Bok hrudníku.", e: "Pilovitý sval." },
+        { t: 4, q: "Který sval se používá pro žvýkání?", a: "M. masseter", h: "Tvář.", e: "Žvýkací sval." },
+        { t: 4, q: "Co je to M. sternocleidomastoideus?", a: "Kývač hlavy", h: "Krk.", e: "Výrazný šikmý sval na krku." },
+        { t: 4, q: "Kde je M. gluteus maximus?", a: "Hýždě", h: "Zadek.", e: "Velký sval hýžďový." },
+        
+        // NERVY, CÉVY, OSTATNÍ (Typ 5 a 6)
+        { t: 5, q: "Co probíhá v carpalním tunelu?", a: "Nervus medianus a šlachy", h: "Zápěstí.", e: "Utlačení způsobuje brnění prstů." },
+        { t: 5, q: "Který nerv se nazývá „brňavka“?", a: "Nervus ulnaris", h: "Loket.", e: "Probíhá za epikondylem humeru." },
+        { t: 5, q: "Který nerv inervuje bránici?", a: "Nervus phrenicus", h: "Z krční míchy.", e: "C3-C5." },
+        { t: 6, q: "Kde se tvoří krev?", a: "Červená kostní dřeň", h: "Uvnitř kostí.", e: "Hlavně ploché kosti." },
+        { t: 6, q: "Co jsou osteoklasty?", a: "Buňky odbourávající kost", h: "V kosti.", e: "Ničí kostní tkáň." },
+        { t: 6, q: "Co jsou osteoblasty?", a: "Buňky tvořící kost", h: "V kosti.", e: "Staví kostní tkáň." },
+        { t: 6, q: "Co je to Haversův systém (osteon)?", a: "Základní jednotka kosti", h: "Mikroskopická struktura.", e: "Soustředné lamely." }
+    ];
+
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let canClick = true;
+
+    function init() {
+        questions = [...database];
+        shuffleArray(questions);
+        currentQuestionIndex = 0;
+        score = 0;
+        canClick = true;
+        
+        updateStats();
+        showQuestion();
+        
+        document.getElementById('end-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    // CHYTRÝ VÝBĚR ŠPATNÉ ODPOVĚDI
+    function getWrongAnswer(currentQuestion) {
+        // Filtrujeme databázi, abychom našli otázky STEJNÉHO TYPU (t)
+        // ale s jinou odpovědí (a)
+        const sameTypeQuestions = database.filter(item => 
+            item.t === currentQuestion.t && item.a !== currentQuestion.a
+        );
+
+        if (sameTypeQuestions.length > 0) {
+            // Pokud existují otázky stejného typu, vybereme náhodnou z nich
+            const randomItem = sameTypeQuestions[Math.floor(Math.random() * sameTypeQuestions.length)];
+            return randomItem.a;
+        } else {
+            // Fallback: Pokud v kategorii není dost otázek (nepravděpodobné), vezmeme náhodnou z celé DB
+            let fallback;
+            do {
+                fallback = database[Math.floor(Math.random() * database.length)].a;
+            } while (fallback === currentQuestion.a);
+            return fallback;
+        }
+    }
+
+    function showQuestion() {
+        // Reset UI
+        document.getElementById('explanation-box').style.display = 'none';
+        document.getElementById('hint-box').style.display = 'none';
+        document.getElementById('hint-btn').style.display = 'inline-block';
+        document.getElementById('next-btn').style.display = 'none';
+        
+        const qData = questions[currentQuestionIndex];
+        document.getElementById('question-text').textContent = qData.q;
+        
+        document.getElementById('hint-box').textContent = qData.h;
+        document.getElementById('explanation-box').innerHTML = `
+            <strong>Vysvětlení:</strong> ${qData.e}
+        `;
+
+        // Získání správné a "chytré" špatné odpovědi
+        const correctAnswer = qData.a;
+        const wrongAnswer = getWrongAnswer(qData);
+
+        const options = [
+            { text: correctAnswer, isCorrect: true },
+            { text: wrongAnswer, isCorrect: false }
+        ];
+        shuffleArray(options);
+
+        const opt0 = document.getElementById('opt-0');
+        const opt1 = document.getElementById('opt-1');
+
+        setupOption(opt0, options[0]);
+        setupOption(opt1, options[1]);
+
+        canClick = true;
+        updateStats();
+    }
+    
+    function setupOption(element, data) {
+        element.textContent = data.text;
+        element.className = 'option-card';
+        element.classList.remove('disabled');
+        element.dataset.correct = data.isCorrect;
+    }
+
+    function showHint() {
+        document.getElementById('hint-box').style.display = 'block';
+        document.getElementById('hint-btn').style.display = 'none';
+    }
+
+    function selectOption(optionIndex) {
+        if (!canClick) return;
+        canClick = false;
+
+        const selectedElement = document.getElementById(`opt-${optionIndex}`);
+        const isCorrect = selectedElement.dataset.correct === 'true';
+
+        if (isCorrect) {
+            selectedElement.classList.add('correct');
+            score++;
+        } else {
+            selectedElement.classList.add('wrong');
+            const otherIndex = optionIndex === 0 ? 1 : 0;
+            const otherElement = document.getElementById(`opt-${otherIndex}`);
+            if (otherElement.dataset.correct === 'true') {
+                otherElement.classList.add('correct');
+            }
+        }
+        
+        document.getElementById('opt-0').classList.add('disabled');
+        document.getElementById('opt-1').classList.add('disabled');
+
+        document.getElementById('explanation-box').style.display = 'block';
+        document.getElementById('next-btn').style.display = 'block';
+        
+        document.getElementById('explanation-box').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+        document.getElementById('progress-fill').style.width = `${progress}%`;
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.length) {
+            showQuestion();
+        } else {
+            endQuiz();
+        }
+    }
+
+    function updateStats() {
+        document.getElementById('question-counter').textContent = `Otázka ${currentQuestionIndex + 1} / ${questions.length}`;
+        document.getElementById('score-counter').textContent = `Skóre: ${score}`;
+    }
+
+    function endQuiz() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('end-screen').classList.remove('hidden');
+        document.getElementById('final-score').textContent = `${score} / ${questions.length}`;
+    }
+
+    function restartQuiz() {
+        init();
+        document.getElementById('progress-fill').style.width = '0%';
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    init();
+
+</script>
+</body>
+</html>
